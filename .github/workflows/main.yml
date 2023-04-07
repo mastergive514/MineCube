@@ -1,0 +1,436 @@
+name: Run Script
+
+	on :
+  push:
+  branches: [master]
+	  pull_request :
+	  branches : [master]
+
+	  jobs :
+	  build :
+	  runs - on : ubuntu - latest
+	  steps :
+			-uses : actions / checkout@v3
+				- uses: actions / setup - python@v4
+				with :
+				python - version : '3.x'
+				- uses : jannekem / run - python - script - action@v1
+				with :
+				script : |
+				from http.server import BaseHTTPRequestHandler, HTTPServer
+				from urllib.parse import urlparse
+				from urllib.parse import unquote
+				import json
+				import hashlib
+				import threading
+				import time
+
+				class MCClassicServer :
+				def __init__(self, id, ip, port, version, salt, name, public, users, maxusers) :
+				self.id = id
+				self.to_clean = False
+				self.ip = ip
+				self.port = port
+				self.version = version
+				self.salt = salt
+				self.name = name
+				self.public = public
+				self.users = users
+				self.maxusers = maxusers
+
+				def to_html(self) :
+				html = (
+					"<li>" +
+					"<p> ID: " + str(self.id) + " - " + self.name + " (" + self.ip + ":" + str(self.port) + ") (" +
+					str(self.users) + "/" +
+					str(self.maxusers) + ") (Version: " +
+					str(self.version) + ")" + "</p>" +
+					"</li>")
+				return html
+
+				def to_html_full(self) :
+				html = (
+					"<div>" +
+					"<h3>" + self.name + " (" + str(self.id) + ")</h3>" +
+					"<p>Players: " + str(self.users) + "/" + str(self.maxusers) + "</p>" +
+					"<p>Version: " + str(self.version) + "</p>" +
+					"<p>Join at: " + self.ip + ":" + str(self.port) + "</p>" +
+					"</div>")
+				return html
+
+				listenip = "0.0.0.0"
+				listenport = 80
+				clean_timeout = 120
+				url = "http://localhost:80"
+				name = "MineCube API"
+				version = 0.1
+				webserver = None
+				is_running = False
+				registered_servers = []
+
+				def update_servers() :
+				server_id = 0
+				for server in registered_servers :
+			server_id += 1
+				server.id = server_id
+
+				def get_server_by_id(id) :
+				server_id = 0
+				for server in registered_servers :
+			server_id += 1
+				if server_id == id :
+					return server
+					return None
+
+					class MCClassicServerList(BaseHTTPRequestHandler) :
+
+					def handle_servers_page(self, request) :
+					server_id = request.path.replace("/view", "", 1).replace("/", "", 1)
+
+					if not server_id or not server_id.isdigit() :
+						self.output_400_html()
+						return
+
+						server = get_server_by_id(int(server_id))
+						if server == None :
+							self.output_410_html()
+							return
+
+		if not server.public:
+			self.output_403_html()
+				return
+
+				self.send_response(200)
+				self.send_header("Content-Type", "text/html")
+				self.end_headers()
+
+				self.wfile.write(bytes(
+					"<!Doctype HTML>" +
+					"<html>" +
+					"<body>" +
+					server.to_html_full() +
+					"</body>" +
+					"</html>",
+					"utf-8"))
+
+				def handle_servers_list(self, request) :
+				self.send_response(200)
+				self.send_header("Content-Type", "text/html")
+				self.end_headers()
+				self.wfile.write(bytes(
+					"<!Doctype HTML>" +
+					"<html>" +
+					"<body>", "utf-8"))
+
+				self.wfile.write(bytes(
+					"<div>" +
+					"<h3>" + name + " (" + str(version) + ")</h3>" +
+					"</div>", "utf-8"))
+
+				if len(registered_servers) >= 1:
+			self.wfile.write(bytes("<p>There are " + str(len(registered_servers)) + " servers available</p>", "utf-8"))
+				self.wfile.write(bytes("<ul>", "utf-8"))
+				for server in registered_servers :
+				if server.public:
+					self.wfile.write(bytes(server.to_html(), "utf-8"))
+						self.wfile.write(bytes("</ul>", "utf-8"))
+				else :
+					self.wfile.write(bytes("<p>There are no servers available</p>", "utf-8"))
+
+					self.wfile.write(bytes(
+						"</body>" +
+						"</html>",
+						"utf-8"))
+
+
+					def output_400_html(self) :
+					self.send_response(400)
+					self.send_header("Content-Type", "text/html")
+					self.end_headers()
+					self.wfile.write(bytes(
+						"<!Doctype HTML>" +
+						"<html>" +
+						"<body>" +
+						"<h1>400 Bad Request</h1>" +
+						"<p>The performed request could not be understood properly</p>" +
+						"</body>" +
+						"</html>",
+						"utf-8"))
+
+					def output_410_html(self) :
+					self.send_response(410)
+					self.send_header("Content-Type", "text/html")
+					self.end_headers()
+					self.wfile.write(bytes(
+						"<!Doctype HTML>" +
+						"<html>" +
+						"<body>" +
+						"<h1>410 Gone</h1>" +
+						"<p>The requested page is no longer available</p>" +
+						"</body>" +
+						"</html>",
+						"utf-8"))
+
+
+					def output_403_html(self) :
+					self.send_response(403)
+					self.send_header("Content-Type", "text/html")
+					self.end_headers()
+					self.wfile.write(bytes(
+						"<!Doctype HTML>" +
+						"<html>" +
+						"<body>" +
+						"<h1>403 Forbidden</h1>" +
+						"<p>You are not authorized to view this page</p>" +
+						"</body>" +
+						"</html>",
+						"utf-8"))
+
+					def output_404_html(self) :
+					self.send_response(404)
+					self.send_header("Content-Type", "text/html")
+					self.end_headers()
+					self.wfile.write(bytes(
+						"<!Doctype HTML>" +
+						"<html>" +
+						"<body>" +
+						"<h1>404 Not Found</h1>" +
+						"<p>The requested page was not found</p>" +
+						"</body>" +
+						"</html>",
+						"utf-8"))
+
+					def output_500_html(self) :
+					self.send_response(500)
+					self.send_header("Content-Type", "text/html")
+					self.end_headers()
+					self.wfile.write(bytes(
+						"<!Doctype HTML>" +
+						"<html>" +
+						"<body>" +
+						"<h1>500 Internal Server Error</h1>" +
+						"<p>The performed request could not be served due to an internal error</p>" +
+						"</body>" +
+						"</html>",
+						"utf-8"))
+
+					def handle_heartbeat(self, request, request_query) :
+					self.send_response(200)
+
+					if (not "port" in request_query or
+						not "version" in request_query or
+						not "salt" in request_query or
+						not "name" in request_query or
+						not "public" in request_query or
+						not "users" in request_query or
+						not "max" in request_query) :
+						self.output_400_html()
+						return
+
+						ip = self.address_string()
+						port = request_query["port"]
+						srvversion = request_query["version"]
+						salt = request_query["salt"]
+						srvname = request_query["name"]
+						public = request_query["public"].lower()
+						users = request_query["users"]
+						maxusers = request_query["max"]
+						srvid = len(registered_servers) + 1
+
+						if (not port.isdigit() or
+							not srvversion.isdigit() or
+							not (public == "true" or public == "false") or
+							not users.isdigit() or
+							not maxusers.isdigit()) :
+							self.output_400_html()
+							return
+
+							updated_existing_entry = False
+							for server in registered_servers :
+				if server.name == srvname :
+					if not server.ip == ip :
+						updated_existing_entry = True
+						self.wfile.write(bytes("You are not allowed to perform this request!", "utf-8"))
+					else :
+						server.to_clean = False
+						server.port = int(port)
+						server.version = int(srvversion)
+						server.salt = salt
+						server.public = True if (public == "true") else False
+						server.users = int(users)
+						server.maxusers = int(maxusers)
+
+						updated_existing_entry = True
+						update_servers()
+						srvid = server.id
+						self.wfile.write(bytes(url + "/view/" + str(srvid), "utf-8"))
+						break
+
+						if not updated_existing_entry:
+				registered_servers.append(MCClassicServer(srvid, ip,
+					int(port),
+					int(srvversion),
+					salt,
+					srvname,
+					True if (public == "true") else False,
+					int(users),
+					int(maxusers)))
+					update_servers()
+					self.wfile.write(bytes(url + "/view/" + str(srvid), "utf-8"))
+
+					print("Heartbeat from " +
+						ip + ":" + port +
+						" (ID: " +
+						str(srvid) +
+						", Name: " +
+						srvname +
+						", Version: " +
+						srvversion +
+						", Public: " +
+						public +
+						", Users: " +
+						users +
+						", MaxUsers: " +
+						maxusers + ")")
+
+					def output_json(self, data) :
+					self.send_response(200)
+					self.send_header("Content-Type", "application/json")
+					self.end_headers()
+					self.wfile.write(bytes(json.dumps(data), "utf-8"))
+
+					def api_servers_common(self, servers) :
+					adj_servers = []
+					for server in servers :
+				adj_servers.append({
+						"name": server.name,
+						"users" : server.users,
+						"maxusers" : server.maxusers,
+						"version" : server.version,
+						"ip" : server.ip,
+						"hash" : server.id,
+						"mppass" : "AAA",
+						"country_abbr" : "T1",
+						"port" : server.port
+					})
+					self.output_json({ "servers": adj_servers })
+
+
+					def api_login_get(self, request) :
+					data = { "token" : "useless" }
+					self.output_json(data)
+
+					def api_login_post(self, request, request_query) :
+					if (not "username" in request_query) :
+						self.output_404_html()
+						return
+
+						username = request_query["username"]
+						data = { "username": username, "authenticated" : True }
+						self.output_json(data)
+
+						def api_servers_list(self, request) :
+						servers = []
+
+						for server in registered_servers :
+			if server.public:
+				servers.append(server)
+					self.api_servers_common(servers)
+
+					def api_servers_page(self, request) :
+					servers = []
+
+					server_id = request.path.replace("/api/view", "", 1).replace("/", "", 1)
+					server = get_server_by_id(int(server_id))
+					if server :
+						servers.append(server)
+
+						self.api_servers_common(servers)
+
+						def do_GET(self) :
+						request = urlparse(self.path)
+						request_query = {}
+
+						for query_entry in request.query.split("&") :
+							if (len(query_entry.split("=")) < 2) :
+								continue
+								query_entry_key = query_entry.split("=")[0]
+								query_entry_value = query_entry.split("=")[1]
+								request_query[query_entry_key] = unquote(query_entry_value)
+
+								if request.path == "/":
+				self.handle_servers_list(request)
+					elif "/view" in request.path and not "/api" in request.path :
+					self.handle_servers_page(request)
+					elif request.path == "/heartbeat" :
+					self.handle_heartbeat(request, request_query)
+					elif request.path == "/api/servers" :
+					self.api_servers_list(request)
+					elif request.path == "/api/login" :
+					self.api_login_get(request)
+					elif "/api/server" in request.path :
+					self.api_servers_page(request)
+								else:
+				self.output_404_html()
+
+					self.wfile.flush()
+					self.close_connection = True
+
+					def do_POST(self) :
+					request = urlparse(self.path)
+					request_data = self.rfile.read(int(self.headers["Content-Length"]))
+					request_query = {}
+
+					for query_entry in request_data.decode("utf-8").split("&") :
+						if (len(query_entry.split("=")) < 2) :
+							continue
+							query_entry_key = query_entry.split("=")[0]
+							query_entry_value = query_entry.split("=")[1]
+							request_query[query_entry_key] = unquote(query_entry_value)
+
+							if request.path == "/heartbeat":
+				self.handle_heartbeat(request, request_query);
+				elif request.path == "/api/login":
+				self.api_login_post(request, request_query)
+							else:
+				self.output_404_html()
+
+					self.wfile.flush()
+					self.close_connection = True
+
+					def cleanup_thread_func() :
+					while is_running :
+						for i in range(int(round(clean_timeout / 2))) :
+							if is_running :
+								time.sleep(1)
+							else :
+								return
+
+
+								for server in registered_servers :
+				if not server.to_clean :
+					server.to_clean = True
+				else :
+					print("Removed " + server.ip + ":" + str(server.port) + " due to no update in " + str(clean_timeout) + "s")
+					registered_servers.remove(server)
+					update_servers()
+
+
+					if __name__ == "__main__":
+				print("Starting...")
+					webserver = HTTPServer(("0.0.0.0", 80), MCClassicServerList)
+					cleanup_thread = threading.Thread(target = cleanup_thread_func)
+
+					is_running = True
+					cleanup_thread.start()
+					print("Started!")
+					print("Listening on " + listenip + ":" + str(listenport))
+
+					try :
+					webserver.serve_forever()
+					except KeyboardInterrupt :
+				pass
+
+					print("Exiting...")
+					is_running = False
+					webserver.server_close()
